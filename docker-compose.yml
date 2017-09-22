@@ -1,0 +1,48 @@
+version: '2'
+volumes:
+  elasticsearch:
+    external: true
+    driver: rancher-nfs
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.1
+    hostname: elasticsearch
+    environment:
+      discovery.type: single-node
+      network.host: 0.0.0.0
+      ES_JAVA_OPTS: -Xms128m -Xmx128m
+      xpack.security.enabled: 'false'
+    stdin_open: true
+    volumes:
+    - elasticsearch:/usr/share/elasticsearch/data
+    tty: true
+    ports:
+    - 9200:9200/tcp
+    - 9300:9300/tcp
+    labels:
+      io.rancher.container.pull_image: always
+  filebeat:
+    image: picoded/docker-filebeat
+    environment:
+      LOG_PATH: '"/var/lib/docker/containers/*/*-json.log"'
+      LOG_EXCLUDE_LINE: .*(([0-9]{2}\[(KNL|IKE|MGR|NET)\])|(POST /_bulk HTTP/1.1\" 200 [0-9]* \"-\" \"Go-http-client/1.1)|(level\=debug.*io\.rancher)).*
+      LOG_LINE_MAX: '900000'
+      ES_HOST: elasticsearch
+      ES_PORT: '9200'
+      ES_INDEX: docker-filebeat-%{+yyyy.MM.dd}
+      ES_COMPRESSION: '0'
+      ES_BATCHSIZE: '10'
+    stdin_open: true
+    volumes:
+    - /var/lib/docker/containers/:/var/lib/docker/containers/:rw
+    - /var/lib/filebeat/:/var/lib/filebeat/:rw
+    tty: true
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.global: 'true'
+  kibana:
+    image: docker.elastic.co/kibana/kibana:5.6.1
+    stdin_open: true
+    tty: true
+    labels:
+      io.rancher.container.pull_image: always
