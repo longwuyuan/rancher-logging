@@ -1,5 +1,7 @@
 version: '2'
 services:
+  logrotate:
+    start_on_create: true
   elasticsearch:
     scale: 1
     start_on_create: true
